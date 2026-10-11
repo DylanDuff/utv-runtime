@@ -4,16 +4,16 @@ Manual (apktool + smali, no patch frameworks) ad removal for the YouTube Android
 personal use. Every finding, patch and its version-proof fingerprint lives in `PATCHES.md`.
 
 ## Structure
-- `./atv`: the CLI. No command = guided flow (doctor, connect, pull, name prompt, decode, patch,
+- `./utv-runtime`: the CLI. No command = guided flow (doctor, connect, pull, name prompt, decode, patch,
   build, install). Subcommands run single steps. Flags: `--ip`, `--name`, `--version`, `--yes`.
 - `lib/common.sh`: constants (PACKAGE, NEW_PACKAGE, paths), prompts (`ask`, `confirm`,
-  `confirm_destructive`), config (`.atv.conf`), version/APK resolution.
-- `lib/steps/<step>.sh`: one `step_<name>` function per step. `atv` sources them all.
+  `confirm_destructive`), config (`.utv-runtime.conf`), version/APK resolution.
+- `lib/steps/<step>.sh`: one `step_<name>` function per step. `utv-runtime` sources them all.
 - `patches/`: patch payloads (`adblock.js`, `AdBlockObserver.smali` template, Perl helpers).
   `lib/steps/patch.sh` applies them.
 
 ## Data
-Top level holds only `atv`, `logs/`, `.atv.conf`, source (`lib/`, `patches/`) and docs.
+Top level holds only `utv-runtime`, `logs/`, `.utv-runtime.conf`, source (`lib/`, `patches/`) and docs.
 Everything generated lives under `workspace/` (gitignored):
 - `workspace/original/<versionName>/`: untouched APKs pulled from the TV. Never modify or overwrite.
 - `workspace/work/<apk name>/`: apktool decodes, plus `workspace/work/.version`. Disposable (all patches are scripted);
@@ -21,7 +21,7 @@ Everything generated lives under `workspace/` (gitignored):
 - `workspace/build/`: intermediates, **wiped by every build**. `workspace/out/`: signed APKs. `logs/`: logcat captures.
 - `workspace/keys/atv.keystore` + `workspace/keys/password.txt`: the one signing key, created on first build. Never
   regenerate. Gitignored, back it up.
-- `.atv.conf`: remembered DEVICE_IP, APP_LABEL, VERSION. Gitignored (`atv.conf.example` committed).
+- `.utv-runtime.conf`: remembered DEVICE_IP, APP_LABEL, VERSION. Gitignored (`utv-runtime.conf.example` committed).
 
 ## Invariants
 - Stock YouTube is a Google-signed system app (`/product/app/YouTubeLeanback`). A re-signed APK can't

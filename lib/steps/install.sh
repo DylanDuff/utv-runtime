@@ -5,7 +5,7 @@ step_install() {
     load_apks
     local files=() name result
     for name in "${APKS[@]}"; do
-        [ -f "$OUT_DIR/$name" ] || die "missing workspace/out/$name. Run './atv build' first."
+        [ -f "$OUT_DIR/$name" ] || die "missing workspace/out/$name. Run './utv-runtime build' first."
         files+=("$OUT_DIR/$name")
     done
 

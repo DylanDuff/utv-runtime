@@ -1,8 +1,8 @@
-# Shared config and helpers. Sourced by ./atv, never run directly.
+# Shared config and helpers. Sourced by ./utv-runtime, never run directly.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_FILE="$ROOT/.atv.conf"
+CONFIG_FILE="$ROOT/.utv-runtime.conf"
 
 PACKAGE="com.google.android.youtube.tv"
 # Stock YouTube is a Google-signed system app, so the patched build installs beside it under this
@@ -11,7 +11,7 @@ NEW_PACKAGE="com.google.android.youtube.tv.adfree"
 DEFAULT_LABEL="YouTube Test"
 ADB_PORT=5555
 
-# Everything the pipeline generates lives under workspace/. Only logs/ and .atv.conf stay top level.
+# Everything the pipeline generates lives under workspace/. Only logs/ and .utv-runtime.conf stay top level.
 WORKSPACE="$ROOT/workspace"
 ORIGINAL_ROOT="$WORKSPACE/original"
 WORK_ROOT="$WORKSPACE/work"
@@ -31,7 +31,7 @@ export JAVA_HOME="${JAVA_HOME:-$JBR}"
 KEYTOOL="$JAVA_HOME/bin/keytool"
 ADB="$(command -v adb || echo "$SDK/platform-tools/adb")"
 
-# Saved between runs in .atv.conf. Flags override them.
+# Saved between runs in .utv-runtime.conf. Flags override them.
 DEVICE_IP=""
 APP_LABEL=""
 VERSION=""
@@ -93,7 +93,7 @@ load_config() {
 
 save_config() {
     {
-        echo "# Written by ./atv. Defaults for the next run."
+        echo "# Written by ./utv-runtime. Defaults for the next run."
         printf 'DEVICE_IP=%q\n' "$DEVICE_IP"
         printf 'APP_LABEL=%q\n' "$APP_LABEL"
         printf 'VERSION=%q\n' "$VERSION"
@@ -123,7 +123,7 @@ resolve_version() {
     if [ -z "$VERSION" ]; then
         VERSION="$(ls -1 "$ORIGINAL_ROOT" 2>/dev/null | sort -V | tail -1)"
     fi
-    [ -n "$VERSION" ] || die "no version known. Run './atv pull' first."
+    [ -n "$VERSION" ] || die "no version known. Run './utv-runtime pull' first."
 }
 
 original_dir() { echo "$ORIGINAL_ROOT/$VERSION"; }
@@ -134,7 +134,7 @@ load_apks() {
     resolve_version
     local dir file
     dir="$(original_dir)"
-    [ -f "$dir/base.apk" ] || die "no workspace/original/$VERSION/base.apk. Run './atv pull' first."
+    [ -f "$dir/base.apk" ] || die "no workspace/original/$VERSION/base.apk. Run './utv-runtime pull' first."
     APKS=(base.apk)
     for file in "$dir"/split_*.apk; do
         [ -e "$file" ] && APKS+=("$(basename "$file")")
@@ -146,8 +146,8 @@ require_decoded() {
     load_apks
     local decoded
     decoded="$(cat "$WORK_ROOT/.version" 2>/dev/null || true)"
-    [ -n "$decoded" ] || die "nothing decoded. Run './atv decode' first."
-    [ "$decoded" = "$VERSION" ] || die "workspace/work/ holds $decoded but $VERSION is selected. Run './atv decode --force'."
+    [ -n "$decoded" ] || die "nothing decoded. Run './utv-runtime decode' first."
+    [ "$decoded" = "$VERSION" ] || die "workspace/work/ holds $decoded but $VERSION is selected. Run './utv-runtime decode --force'."
 }
 
 resolve_build_tools() {

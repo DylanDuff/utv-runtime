@@ -1,7 +1,7 @@
 # connect: adb over the network to the TV, waiting for the on-screen debugging prompt if needed.
 
 step_connect() {
-    [ -n "$DEVICE_IP" ] || die "no TV IP. Pass --ip or run './atv' to be asked."
+    [ -n "$DEVICE_IP" ] || die "no TV IP. Pass --ip or run './utv-runtime' to be asked."
     log "connecting to $(serial)"
     "$ADB" connect "$(serial)" >/dev/null 2>&1 || true
 

@@ -4,8 +4,8 @@ workspace/
 *.idsig
 logs/
 
-# Local config (see atv.conf.example)
-.atv.conf
+# Local config (see utv-runtime.conf.example)
+.utv-runtime.conf
 
 # Tooling
 .DS_Store

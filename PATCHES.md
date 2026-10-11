@@ -93,7 +93,7 @@ crash, so it had no effect and was removed.
 
 # Patches
 
-Applied by `./atv patch` (`lib/steps/patch.sh`) in order. Each patch finds its file by string anchor and writes a
+Applied by `./utv-runtime patch` (`lib/steps/patch.sh`) in order. Each patch finds its file by string anchor and writes a
 `# PATCH <id>` marker so re-running is a no-op.
 
 ## gms-security-graceful
@@ -162,6 +162,6 @@ Fingerprint (resolved by `lib/steps/patch.sh` each run; nothing obfuscated is ha
 
 ## Build notes
 
-- `./atv install` runs `cmd package compile -m speed -f` after installing. A sideloaded APK starts
+- `./utv-runtime install` runs `cmd package compile -m speed -f` after installing. A sideloaded APK starts
   as `status=verify` (interpreted/JIT); stock is `speed-profile` from the Play Store. Fixed the
   noticeably sluggish UI.

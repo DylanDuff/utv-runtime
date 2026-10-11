@@ -1,5 +1,5 @@
 #!/bin/bash
-# atv: build and install an ad-free YouTube for Android TV beside the stock app.
+# utv-runtime: build and install an ad-free YouTube for Android TV beside the stock app.
 # Run with no command for the guided flow. See README.md.
 source "$(dirname "$0")/lib/common.sh"
 for file in "$ROOT"/lib/steps/*.sh; do
@@ -9,7 +9,7 @@ done
 
 usage() {
     cat <<EOF
-Usage: ./atv [command] [options]
+Usage: ./utv-runtime [command] [options]
 
 With no command, runs the guided flow: check tools, connect to the TV, pull the
 installed YouTube, ask for an app name, then decode, patch, build, sign and install.
@@ -30,7 +30,7 @@ Options:
   --version <ver>    which workspace/original/<ver>/ to use for offline steps (default: last pulled)
   --yes              accept defaults without prompting (never skips destructive prompts)
 
-Defaults for --ip and --name are remembered in .atv.conf.
+Defaults for --ip and --name are remembered in .utv-runtime.conf.
 EOF
 }
 

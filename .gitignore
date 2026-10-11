@@ -1,0 +1,15 @@
+# Generated: originals, decodes, builds, signed APKs, signing key (back up workspace/keys/)
+workspace/
+*.apk
+*.idsig
+logs/
+
+# Local config (see atv.conf.example)
+.atv.conf
+
+# Tooling
+.DS_Store
+.claude/
+.conductor/
+.codex/
+.env

@@ -1,0 +1,115 @@
+#!/bin/bash
+# atv: build and install an ad-free YouTube for Android TV beside the stock app.
+# Run with no command for the guided flow. See README.md.
+source "$(dirname "$0")/lib/common.sh"
+for file in "$ROOT"/lib/steps/*.sh; do
+    # shellcheck disable=SC1090
+    source "$file"
+done
+
+usage() {
+    cat <<EOF
+Usage: ./atv [command] [options]
+
+With no command, runs the guided flow: check tools, connect to the TV, pull the
+installed YouTube, ask for an app name, then decode, patch, build, sign and install.
+
+Commands (single steps):
+  doctor             check required tools
+  pull               pull the installed stock APKs into workspace/original/<version>/
+  decode [--force]   decode workspace/original/<version>/ into workspace/work/ and rename the package
+  patch              apply all patches to workspace/work/ (safe to re-run; also re-applies the name)
+  build              rebuild, zipalign and sign into workspace/out/
+  install            install workspace/out/ over the patched app and AOT compile it
+  logcat [--raw|--all]  stream logs, saved to logs/
+  help               show this help
+
+Options:
+  --ip <address>     TV address (port defaults to $ADB_PORT)
+  --name <label>     launcher name for the patched app
+  --version <ver>    which workspace/original/<ver>/ to use for offline steps (default: last pulled)
+  --yes              accept defaults without prompting (never skips destructive prompts)
+
+Defaults for --ip and --name are remembered in .atv.conf.
+EOF
+}
+
+guided() {
+    step 1/6 "Checking tools"
+    step_doctor
+
+    step 2/6 "Connecting to the TV"
+    DEVICE_IP="$(ask "TV IP address" "$DEVICE_IP")"
+    step_connect
+    save_config
+
+    step 3/6 "Pulling stock YouTube"
+    step_pull
+    save_config
+    local patched_version
+    patched_version="$(installed_version "$NEW_PACKAGE")"
+    [ -n "$patched_version" ] && log "patched app currently installed: $patched_version"
+
+    step 4/6 "App name"
+    APP_LABEL="$(ask "Application name" "${APP_LABEL:-$DEFAULT_LABEL}")"
+    [ -n "$APP_LABEL" ] || die "application name can't be empty"
+    save_config
+
+    cat >&2 <<EOF
+
+  TV          $(serial)
+  Stock       $PACKAGE $VERSION (left untouched)
+  Patched     $NEW_PACKAGE "$APP_LABEL"
+  Patches     rename, gms-security-graceful, adblock-inject, ua-stock-package
+
+EOF
+    confirm "Build and install now?" Y || die "cancelled"
+
+    step 5/6 "Decoding and patching"
+    step_decode --force
+    step_patch
+
+    step 6/6 "Building and installing"
+    step_build
+    step_install
+
+    printf '\n\033[1;32mDone.\033[0m "%s" is installed on the TV.\n\n' "$APP_LABEL" >&2
+    if confirm "Open it on the TV now?" Y; then
+        launch_app
+    fi
+}
+
+command=""
+args=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --ip) DEVICE_IP_FLAG="${2:?--ip needs a value}"; shift 2 ;;
+        --name) APP_LABEL_FLAG="${2:?--name needs a value}"; shift 2 ;;
+        --version) VERSION_FLAG="${2:?--version needs a value}"; shift 2 ;;
+        --yes|-y) ASSUME_YES=1; shift ;;
+        -h|--help) command=help; shift ;;
+        -*) args+=("$1"); shift ;;
+        *)
+            if [ -z "$command" ]; then command="$1"; else args+=("$1"); fi
+            shift
+            ;;
+    esac
+done
+
+load_config
+DEVICE_IP="${DEVICE_IP_FLAG:-$DEVICE_IP}"
+APP_LABEL="${APP_LABEL_FLAG:-$APP_LABEL}"
+VERSION="${VERSION_FLAG:-$VERSION}"
+
+case "$command" in
+    ""|run) guided ;;
+    doctor) step_doctor ;;
+    pull) step_connect; step_pull; save_config ;;
+    decode) step_decode "${args[@]+"${args[@]}"}" ;;
+    patch) step_rename; step_patch; save_config ;;
+    build) step_build ;;
+    install) step_connect; step_install ;;
+    logcat) step_connect; step_logcat "${args[@]+"${args[@]}"}" ;;
+    help) usage ;;
+    *) usage >&2; die "unknown command: $command" ;;
+esac

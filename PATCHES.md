@@ -159,6 +159,19 @@ Fingerprint (resolved by `lib/steps/patch.sh` each run; nothing obfuscated is ha
 
 Verified by A/B (the `gms-security-graceful` build played ads) and by its own log line.
 
+## JS patch: navigation
+
+| | |
+| --- | --- |
+| File | `patches/navigation.js` |
+| Setting | "Hide topic tabs" (`UTV_NAVIGATION`, default on) |
+| Change | Removes `guideEntryRenderer`s whose `navigationEndpoint.browseEndpoint.browseId` is `FEtopics_<topic>` from every `guideSectionRenderer.items` (Gaming, Podcasts, News, Music, Sport, Movies & TV, and any topic added later). Home (`FEtopics`) stays. |
+| Applies | When the guide loads, i.e. on app restart |
+| Result | **Works.** Menu is Search, Home, Shorts, Subscriptions, Library, Settings. |
+
+Planned: let the user pick which topics to hide with a multi-select setting, like YouTube's
+preferred-languages setting. Needs multi-select support in the core first (see `docs/js-patches.md`).
+
 ## ua-stock-package
 
 | | |
@@ -247,3 +260,13 @@ builds doesn't need a fresh decode. Results are base64'd because titles collapse
   toggling wrote `yt.leanback.default::UTV_ADBLOCK = {"data":false}`.
 - Dead ends: matching `contents.tvBrowseRenderer` at parse time (that's the post-rewrite shape), and
   adding tabs directly.
+
+## Finding 8: main navigation (guide) response (7.21.302)
+
+- Fetched once at startup (so only visible with capture mode, see `docs/js-patches.md`). Top-level
+  keys `responseContext, items, footer, topbar, startupBehaviours`.
+- `items[0].guideSectionRenderer.items[]` is `guideEntryRenderer { formattedTitle, icon.iconType,
+  navigationEndpoint }`: Search (`searchEndpoint`), Home (`browseId FEtopics`), Shorts
+  (`reelWatchEndpoint`), Subscriptions (`FEsubscriptions`), Library (`FElibrary`), then topic tabs
+  `FEtopics_gaming`, `_podcasts`, `_news`, `_music`, `_sports`, `_movies`. Settings comes from `footer`.
+- The menu DOM is `ytlr-guide-response` > `ytlr-guide-entry-renderer`.

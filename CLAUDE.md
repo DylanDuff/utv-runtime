@@ -8,7 +8,7 @@ personal use. Every finding, patch and its version-proof fingerprint lives in `P
   build, install). Subcommands run single steps. Flags: `--ip`, `--name`, `--version`, `--yes`.
 - `lib/common.sh`: constants (PACKAGE, NEW_PACKAGE, paths), prompts (`ask`, `confirm`,
   `confirm_destructive`), config (`.utv-runtime.conf`), version/APK resolution.
-- `lib/steps/<step>.sh`: one `step_<name>` function per step. `utv-runtime` sources them all.
+- `lib/steps/<step>.sh`: one `step_<name>` function per step (`eval.sh` also holds the JS wrapper). `utv-runtime` sources them all.
 - `patches/`: patch payloads (`adblock.js`, `AdBlockObserver.smali` template, Perl helpers).
   `lib/steps/patch.sh` applies them.
 
@@ -37,5 +37,10 @@ Everything generated lives under `workspace/` (gitignored):
   (`dev.cobalt.*`, `GEN_JNI` stubs, JNI-called methods) and resolve obfuscated ones structurally.
   Every patch writes `# PATCH <id>` and is a no-op when re-run.
 - apktool 3 takes `-q` after the subcommand (`apktool d -q`), not before.
-- Cobalt drops console output from injected scripts; don't rely on it for verification.
+- Cobalt drops console output from injected scripts and YouTube swallows uncaught errors. Injected
+  JS logs via `utv.report()` (title channel -> `AdBlockObserver.titleWasSet` -> logcat tag `utv-runtime`).
+- No Chrome DevTools in this build. `--devtools` adds `EvalReceiver` for `./utv-runtime eval`; it is
+  an exported receiver, so never make it the default.
+- The page enforces Trusted Types: string `eval` needs a TrustedScript (the eval wrapper creates a
+  pass-through policy). Code delivered via `evaluateJavaScript` isn't affected.
 - Ask before any uninstall on the device. No em-dashes in user-facing text.

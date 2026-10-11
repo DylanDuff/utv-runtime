@@ -165,3 +165,55 @@ Fingerprint (resolved by `lib/steps/patch.sh` each run; nothing obfuscated is ha
 - `./utv-runtime install` runs `cmd package compile -m speed -f` after installing. A sideloaded APK starts
   as `status=verify` (interpreted/JIT); stock is `speed-profile` from the Play Store. Fixed the
   noticeably sluggish UI.
+
+## Finding 4: no Chrome DevTools in this Cobalt build
+
+- `libchrobalt.so` contains the `remote-debugging-port` switch name (Chromium defines all switch
+  names centrally) but none of the DevTools HTTP server's strings (`webSocketDebuggerUrl`,
+  `devtoolsFrontendUrl`, `/devtools/browser/`, "DevTools listening").
+- Tested with a temporary patch (since removed) that added `--remote-debugging-port=9222` and
+  `--remote-allow-origins=*` after `"--hide-scrollbars"` in `CobaltActivity`'s switch list
+  (unknown switches pass straight through to Chromium).
+  The engine logs `'remote-debugging-port': '9222'` but nothing listens on TCP 9222 and there is
+  no devtools abstract socket. The server isn't compiled in.
+
+## Finding 5: getting output out of injected JS
+
+- `console.*` from injected code never reaches logcat (the `LogJsConsoleMessages` feature only shows
+  Blink's own messages such as "Refused to set unsafe header").
+- Uncaught errors thrown from a `setTimeout` in injected code don't appear either; YouTube's global
+  error handler swallows them.
+- **Works:** `report(msg)` in `adblock.js` sets `document.title = "utv:" + msg` (one message per
+  task, title restored afterwards). `AdBlockObserver.titleWasSet(String)` logs titles starting with
+  `utv:` under the logcat tag `utv-runtime`.
+- First direct confirmation that the script runs and strips:
+  `utv:installed on https://www.youtube.com/tv` about 120 ms after injection, then
+  `utv:stripped ads from response 1` during the home screen load.
+
+## Finding 6: page structure and security policy (7.21.302)
+
+- UI is YouTube's Living Room web components: `ytlr-app`, `ytlr-tv-browse-renderer`,
+  `ytlr-setting-action-renderer`, `yt-virtual-list`, Redux-connected elements
+  (`ytlr-redux-connect-*`). Pages are renderers built from InnerTube JSON. Globals: `yt`, `ytcfg`, `_yttv`.
+- The page enforces **Trusted Types** (`require-trusted-types-for 'script'`): `eval(string)` throws
+  "Refused to evaluate a string as JavaScript". A pass-through policy works
+  (`trustedTypes.createPolicy("utv-eval", { createScript: s => s })`), so policy names aren't restricted.
+  `evaluateJavaScript` from the embedder isn't subject to it.
+- User agent (after `ua-stock-package`): `... Cobalt/27.lts.3.1040801-gold ... (TCL, Smart TV Pro)
+  com.google.android.youtube.tv/7.21.302`.
+
+## devtools build: live JS console
+
+Opt-in with `--devtools`. Never for everyday use: the receiver is exported, so any app on the TV
+could inject JS into the patched app.
+
+| | |
+| --- | --- |
+| Smali | `patches/EvalReceiver.smali` (`Lzz/EvalReceiver;`), registered from the `AdBlockObserver` constructor via `__DEVTOOLS_INIT__` |
+| Trigger | Broadcast `dev.utv.runtime.EVAL` to the patched package, extra `js64` = base64 script |
+| Context | `ActivityThread.currentApplication()` by reflection (no app class or obfuscated name needed) |
+| Result | Page reports `utv:eval:<id>:<i>/<n>:<base64 chunk>` over the title channel; CLI reassembles |
+| CLI | `./utv-runtime eval '<js>'`, `eval -f file.js`, or `eval` for an interactive prompt |
+
+Both generated classes are rewritten on every `patch` run, so switching between normal and devtools
+builds doesn't need a fresh decode. Results are base64'd because titles collapse whitespace.

@@ -46,10 +46,27 @@ Single steps, for iterating:
 ./utv-runtime build                  # rebuild, zipalign, sign into workspace/out/
 ./utv-runtime install                # install over the patched app, AOT compile
 ./utv-runtime logcat [--raw|--all]   # stream logs, saved to logs/
+./utv-runtime eval '<js>'            # run JS in the app's page (--devtools builds only)
 ```
 
 Options: `--ip <address>`, `--name <label>`, `--version <ver>`, `--yes` (accept defaults; destructive
 prompts still ask). Example, rename only: `./utv-runtime patch --name "YouTube" && ./utv-runtime build && ./utv-runtime install`.
+
+### Debugging the page
+
+Chrome DevTools isn't compiled into this Cobalt build, so `--devtools` builds include a small JS
+console instead:
+
+```sh
+./utv-runtime --devtools             # build and install a debug build
+./utv-runtime eval 'document.title'  # run once; objects print as JSON, DOM nodes as HTML
+./utv-runtime eval -f probe.js       # run a file
+./utv-runtime eval                   # interactive utv> prompt
+```
+
+Injected code can log with `utv.report("message")` (logcat tag `utv-runtime`). Switch back to a
+normal build with a plain `./utv-runtime` run when done: in a debug build any app on the TV can
+inject JS into the patched app.
 
 The first build creates `workspace/keys/atv.keystore`. Back up `workspace/keys/`: losing it means the installed app
 can't be updated without uninstalling it (and signing in again). If that happens, `install`

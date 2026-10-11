@@ -22,6 +22,8 @@ Commands (single steps):
   build              rebuild, zipalign and sign into workspace/out/
   install            install workspace/out/ over the patched app and AOT compile it
   logcat [--raw|--all]  stream logs, saved to logs/
+  eval ['<js>'|-f file]  run JS in the app's page and print the result (--devtools builds);
+                     no argument opens an interactive prompt
   help               show this help
 
 Options:
@@ -29,6 +31,8 @@ Options:
   --name <label>     launcher name for the patched app
   --version <ver>    which workspace/original/<ver>/ to use for offline steps (default: last pulled)
   --yes              accept defaults without prompting (never skips destructive prompts)
+  --devtools         debug build with a live JS console for 'eval'. Any app on the TV could then
+                     inject JS into the patched app, so never use it for your everyday build
 
 Defaults for --ip and --name are remembered in .utv-runtime.conf.
 EOF
@@ -60,7 +64,7 @@ guided() {
   TV          $(serial)
   Stock       $PACKAGE $VERSION (left untouched)
   Patched     $NEW_PACKAGE "$APP_LABEL"
-  Patches     rename, gms-security-graceful, adblock-inject, ua-stock-package
+  Patches     rename, gms-security-graceful, adblock-inject, ua-stock-package$([ "$DEVTOOLS" = 1 ] && echo ", devtools")
 
 EOF
     confirm "Build and install now?" Y || die "cancelled"
@@ -87,6 +91,7 @@ while [ $# -gt 0 ]; do
         --name) APP_LABEL_FLAG="${2:?--name needs a value}"; shift 2 ;;
         --version) VERSION_FLAG="${2:?--version needs a value}"; shift 2 ;;
         --yes|-y) ASSUME_YES=1; shift ;;
+        --devtools) DEVTOOLS=1; shift ;;
         -h|--help) command=help; shift ;;
         -*) args+=("$1"); shift ;;
         *)
@@ -110,6 +115,7 @@ case "$command" in
     build) step_build ;;
     install) step_connect; step_install ;;
     logcat) step_connect; step_logcat "${args[@]+"${args[@]}"}" ;;
+    eval) step_connect; step_eval "${args[@]+"${args[@]}"}" ;;
     help) usage ;;
     *) usage >&2; die "unknown command: $command" ;;
 esac

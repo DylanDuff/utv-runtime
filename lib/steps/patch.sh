@@ -83,13 +83,23 @@ patch_adblock_inject() {
     script="$(sed -e '/^[[:space:]]*\/\//d' -e 's/^[[:space:]]*//' -e '/^$/d' "$PATCHES_DIR/adblock.js" \
         | perl -pe 's/\\/\\\\/g; s/"/\\"/g; s/\n/\\n/')"
 
-    mkdir -p "$BASE_DIR/smali_classes4/zz"
-    BASE_OBSERVER="$base_observer" NATIVE_PTR="$native_ptr" SCRIPT="$script" perl -pe '
+    # --devtools builds add EvalReceiver (live JS console for `utv-runtime eval`). Both classes are
+    # regenerated every run, so switching build type doesn't need a fresh decode.
+    local classes="$BASE_DIR/smali_classes4/zz" devtools_init=""
+    mkdir -p "$classes"
+    rm -f "$classes/EvalReceiver.smali"
+    if [ "$DEVTOOLS" = 1 ]; then
+        devtools_init='    invoke-static {p0}, Lzz/EvalReceiver;->register(Lzz/AdBlockObserver;)V'
+        cp "$PATCHES_DIR/EvalReceiver.smali" "$classes/EvalReceiver.smali"
+        warn "[$id] devtools build: any app on the TV can inject JS into the patched app"
+    fi
+    BASE_OBSERVER="$base_observer" NATIVE_PTR="$native_ptr" SCRIPT="$script" DEVTOOLS_INIT="$devtools_init" perl -pe '
         s/__BASE_OBSERVER__/$ENV{BASE_OBSERVER}/g;
         s/__NATIVE_PTR__/$ENV{NATIVE_PTR}/g;
         s/__SCRIPT__/$ENV{SCRIPT}/g;
-    ' "$PATCHES_DIR/AdBlockObserver.smali" > "$BASE_DIR/smali_classes4/zz/AdBlockObserver.smali"
-    log "[$id] wrote AdBlockObserver (base $base_observer, pointer field $native_ptr)"
+        s/^__DEVTOOLS_INIT__$/$ENV{DEVTOOLS_INIT}/;
+    ' "$PATCHES_DIR/AdBlockObserver.smali" > "$classes/AdBlockObserver.smali"
+    log "[$id] wrote AdBlockObserver (base $base_observer, pointer field $native_ptr)$([ "$DEVTOOLS" = 1 ] && echo " + EvalReceiver")"
 
     if applied "$id" "$shell"; then
         log "[$id] already registered"

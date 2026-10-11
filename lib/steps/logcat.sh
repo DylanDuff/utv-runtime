@@ -21,7 +21,7 @@ step_logcat() {
             ;;
         *)
             device logcat -v time -b main,system,crash \
-                | rg --line-buffered -i "AndroidRuntime|FATAL|$NEW_PACKAGE|atv-adblock|cobalt|chromium|GmsClient|ActivityManager: (Start|Process .* died)" \
+                | rg --line-buffered -i "AndroidRuntime|FATAL|$NEW_PACKAGE|utv-runtime|cobalt|chromium|GmsClient|ActivityManager: (Start|Process .* died)" \
                 | tee "$logfile"
             ;;
     esac

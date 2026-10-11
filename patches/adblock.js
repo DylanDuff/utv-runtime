@@ -1,10 +1,32 @@
 // Injected into https://www.youtube.com/tv by Lzz/AdBlockObserver; (see PATCHES.md "adblock-inject").
 // Strips video ad scheduling from InnerTube responses as they are parsed.
 // Keep this file ASCII only: patch.sh embeds it in smali as a string literal.
-// Markers use console.error because Cobalt only forwards error-level console output to logcat.
+// report() logs to logcat (tag utv-runtime) by briefly setting document.title to "utv:<message>";
+// AdBlockObserver.titleWasSet picks it up. Console output and uncaught errors never reach logcat.
 (function () {
     if (location.hostname !== "www.youtube.com" || window.__atvAdblock) return;
     window.__atvAdblock = true;
+
+    // Messages go out one per task so each title change reaches the browser, then the title is restored.
+    var reportQueue = [];
+    var savedTitle = null;
+    function report(message) {
+        reportQueue.push(message);
+        if (reportQueue.length === 1 && savedTitle === null) setTimeout(flushReports, 0);
+    }
+    function flushReports() {
+        if (savedTitle === null) savedTitle = document.title;
+        if (reportQueue.length === 0) {
+            document.title = savedTitle;
+            savedTitle = null;
+            return;
+        }
+        document.title = "utv:" + reportQueue.shift();
+        setTimeout(flushReports, 0);
+    }
+
+    // Small global for other scripts (e.g. `utv-runtime eval` snippets) to log through.
+    window.utv = { report: report };
 
     var AD_KEYS = ["adPlacements", "adSlots", "playerAds", "adBreakHeartbeatParams"];
     var stripped = 0;
@@ -29,10 +51,10 @@
         var result = parse.apply(this, arguments);
         if (result && typeof result === "object" && stripAds(result)) {
             stripped++;
-            console.error("atv-adblock: stripped " + stripped);
+            report("stripped ads from response " + stripped);
         }
         return result;
     };
 
-    console.error("atv-adblock: installed on " + location.href);
+    report("installed on " + location.href);
 })();

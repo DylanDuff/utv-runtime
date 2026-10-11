@@ -175,10 +175,24 @@
         });
     }
 
+    // ---- capture (debugging) ------------------------------------------------------------------
+    // With localStorage["utv-runtime::capture"] set (e.g. via `utv-runtime eval`), keep the raw text of
+    // the first 15 responses after page load (startup: guide, home) and the latest 15, inspectable with
+    // utv.captured(). Raw text, because the app rewrites parsed objects afterwards.
+    var CAPTURE_FLAG = "utv-runtime::capture";
+    var capturing = false;
+    var captured = [];
+    try { capturing = !!localStorage.getItem(CAPTURE_FLAG); } catch (e) {}
+    if (capturing) report("capture mode on (clear with localStorage.removeItem(\"" + CAPTURE_FLAG + "\"))");
+
     // ---- response hook ------------------------------------------------------------------------
-    JSON.parse = function () {
+    JSON.parse = function (text) {
         var result = parse.apply(this, arguments);
         if (!result || typeof result !== "object") return result;
+        if (capturing && typeof text === "string" && text.length > 500) {
+            captured.push({ time: Date.now(), size: text.length, keys: Object.keys(result).slice(0, 8), text: text });
+            if (captured.length > 30) captured.splice(15, 1);
+        }
         try {
             injectSettingsCategory(result);
         } catch (e) {
@@ -199,6 +213,7 @@
     window.utv = {
         report: report,
         patch: definePatch,
+        captured: function () { return captured; },
         // For debugging (`utv-runtime eval 'utv.status()'`).
         status: function () {
             return {

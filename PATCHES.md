@@ -93,7 +93,7 @@ crash, so it had no effect and was removed.
 
 # Patches
 
-Applied by `./utv-runtime patch` (`lib/steps/patch.sh`) in order. Each patch finds its file by string anchor and writes a
+Smali patches, applied by `./utv-runtime patch` (`lib/steps/patch.sh`) in order. Each patch finds its file by string anchor and writes a
 `# PATCH <id>` marker so re-running is a no-op.
 
 ## gms-security-graceful
@@ -104,7 +104,7 @@ Applied by `./utv-runtime patch` (`lib/steps/patch.sh`) in order. Each patch fin
 | Class / method (7.21.302) | `cyf.r(Lczc;Ljava/util/Set;)V` in `smali_classes2/cyf.smali` (GMS `BaseGmsClient.getRemoteService`) |
 | Anchor | `"IGmsServiceBroker.getService failed"` (only method containing it), also `"mServiceBroker is null, client disconnected"` |
 | Change | SecurityException handler `move-exception v0; throw v0` becomes `move-exception v0; goto :<graceful>` |
-| Logic | `patches/gms-security-graceful.pl` |
+| Logic | `patches/smali/gms-security-graceful.pl` |
 | Result | App launches, plays video, **TV sign-in works**. Ads still play (expected). |
 
 Fingerprint (labels are apktool-generated; find them by structure):
@@ -118,30 +118,28 @@ Fingerprint (labels are apktool-generated; find them by structure):
 Side effects: GMS-backed features (DroidGuard attestation, possibly Cast TV) silently fail.
 Only 2 refusals logged per launch in the test.
 
-## adblock-inject
+## runtime-inject (bootloader)
+
+Formerly `adblock-inject`. The smali side only loads JS; features live in JS patches
+(see [docs/js-patches.md](docs/js-patches.md)).
 
 | | |
 | --- | --- |
-| Purpose | Remove video ads by stripping ad fields from InnerTube responses inside the web app |
-| Files | `patches/adblock.js` (the script), `patches/AdBlockObserver.smali` (template) |
-| New class | `Lzz/AdBlockObserver;` in `smali_classes4/` (own dex, avoids the 64K method limit) |
+| Purpose | Inject the runtime bundle (`patches/runtime.js` + `patches/*.js`) into every youtube.com/tv page |
+| Files | `patches/smali/RuntimeObserver.smali` (template), `patches/runtime.js` (core), `patches/*.js` (JS patches) |
+| New class | `Lzz/RuntimeObserver;` in `smali_classes4/` (own dex, avoids the 64K method limit) |
 | Registered in | `dev.cobalt.shell.Shell.initFromNativeTabContents(WebContents)V`, right after `new StartupGuardNavigationObserver(mWebContents)` |
 | Injection | `GEN_JNI.cobalt_org_chromium_content_browser_webcontents_WebContentsImpl_evaluateJavaScript(JLjava/lang/Object;Ljava/lang/Object;)V` with (native pointer, script, null) |
-| Result | **Works.** No ads seen across several videos. Playback and sign-in unaffected. |
+| Result | **Works.** Core loads, JS patches register, Settings category works, ads stripped. |
 
 How it works:
 - The observer overrides `primaryMainDocumentElementAvailable()V` and
   `didFinishNavigationInPrimaryMainFrame(NavigationHandle)V`, so it injects on every page load,
   including the return from the sign-in page. It never detaches.
-- The script wraps `JSON.parse` and deletes `adPlacements`, `adSlots`, `playerAds`,
-  `adBreakHeartbeatParams` (also inside a nested `playerResponse`). It only runs on
-  `www.youtube.com` and is guarded by `window.__atvAdblock` against double injection.
+- It also overrides `titleWasSet(String)V` for the log channel (Finding 5).
 - Chromium did not block `evaluateJavaScript` on youtube.com/tv (no CHECK crash), so Cobalt allows
   JS injection from the embedder.
-- Verified by A/B: the `gms-security-graceful` build (no injection) played ads; with this patch none
-  appear. The script's
-  console markers never reach logcat: Cobalt doesn't forward console output from injected scripts
-  (page errors like "Refused to set unsafe header" do appear as `INFO:CONSOLE`).
+- Both generated classes are rewritten on every `patch` run, so JS edits need no fresh decode.
 
 Fingerprint (resolved by `lib/steps/patch.sh` each run; nothing obfuscated is hardcoded):
 - Observer base class (`Lbdn;` in 7.21.302) = `.super` of `Ldev/cobalt/shell/StartupGuardNavigationObserver;`.
@@ -149,6 +147,17 @@ Fingerprint (resolved by `lib/steps/patch.sh` each run; nothing obfuscated is ha
   `Lcobalt/org/chromium/content/browser/webcontents/WebContentsImpl;`.
 - The `GEN_JNI` stub name is unobfuscated (jni_zero); its body is `N.VJOO(6, j, obj, obj2)`.
 - The Java wrapper `WebContentsImpl.evaluateJavaScript` is stripped by R8; don't look for it.
+
+## JS patch: adblock
+
+| | |
+| --- | --- |
+| File | `patches/adblock.js` |
+| Setting | "Block ads" (`UTV_ADBLOCK`), default on |
+| Change | Deletes `adPlacements`, `adSlots`, `playerAds`, `adBreakHeartbeatParams` from every parsed response (and a nested `playerResponse`) |
+| Result | **Works.** No ads seen across several videos. First direct confirmation: `adblock: stripped ads from response 1` on the home screen load. |
+
+Verified by A/B (the `gms-security-graceful` build played ads) and by its own log line.
 
 ## ua-stock-package
 
@@ -183,8 +192,8 @@ Fingerprint (resolved by `lib/steps/patch.sh` each run; nothing obfuscated is ha
   Blink's own messages such as "Refused to set unsafe header").
 - Uncaught errors thrown from a `setTimeout` in injected code don't appear either; YouTube's global
   error handler swallows them.
-- **Works:** `report(msg)` in `adblock.js` sets `document.title = "utv:" + msg` (one message per
-  task, title restored afterwards). `AdBlockObserver.titleWasSet(String)` logs titles starting with
+- **Works:** `report(msg)` in `runtime.js` sets `document.title = "utv:" + msg` (one message per
+  task, title restored afterwards). `RuntimeObserver.titleWasSet(String)` logs titles starting with
   `utv:` under the logcat tag `utv-runtime`.
 - First direct confirmation that the script runs and strips:
   `utv:installed on https://www.youtube.com/tv` about 120 ms after injection, then
@@ -209,7 +218,7 @@ could inject JS into the patched app.
 
 | | |
 | --- | --- |
-| Smali | `patches/EvalReceiver.smali` (`Lzz/EvalReceiver;`), registered from the `AdBlockObserver` constructor via `__DEVTOOLS_INIT__` |
+| Smali | `patches/smali/EvalReceiver.smali` (`Lzz/EvalReceiver;`), registered from the `RuntimeObserver` constructor via `__DEVTOOLS_INIT__` |
 | Trigger | Broadcast `dev.utv.runtime.EVAL` to the patched package, extra `js64` = base64 script |
 | Context | `ActivityThread.currentApplication()` by reflection (no app class or obfuscated name needed) |
 | Result | Page reports `utv:eval:<id>:<i>/<n>:<base64 chunk>` over the title channel; CLI reassembles |
@@ -217,3 +226,24 @@ could inject JS into the patched app.
 
 Both generated classes are rewritten on every `patch` run, so switching between normal and devtools
 builds doesn't need a fresh decode. Results are base64'd because titles collapse whitespace.
+
+## Finding 7: native settings integration (7.21.302)
+
+- The raw Settings response (top-level `items`, `title`, `titleRenderer`) is `items[]` of
+  `settingCategoryCollectionRenderer { title?, categoryId, focused, items[] }`. The app rewrites it
+  after parsing into `contents.tvBrowseRenderer.content.tvSecondaryNavRenderer` (categories become an
+  unselectable heading tab plus one tab per setting), so hooks must match the raw `items` shape.
+- Setting renderers seen: `settingActionRenderer`, `settingsPaneRenderer`, `settingBooleanRenderer`,
+  `settingSingleOptionMenuRenderer`, `settingReadOnlyItemRenderer`, link-phone renderers.
+- Booleans use `setSettingEndpoint` (account setting, numeric `settingItemId`, sent to the server) or
+  `setClientSettingEndpoint` (`settingDatas[{clientSettingEnum:{item}, boolValue}]`, client only).
+- Client settings are stored by `ClientSettingService` (anchor: that string in its error messages) in
+  `localStorage["yt.leanback.default::<ITEM>"] = {"data": ...}` (per-identity ones as
+  `{"data": {"<id>": v}}`). It only handles keys in a registry of known global settings (`_yttv.lOa`
+  in 7.21.302, `{ KEY: true }`) and reads defaults from a Map (`_yttv.FD`). An unknown key renders
+  but can't be toggled.
+- Adding our key to both makes a custom `settingBooleanRenderer` fully native. Found by content: the
+  plain object with `ENABLE_PREVIEWS_WITH_SOUND: true` and the Map that has that key. Verified live:
+  toggling wrote `yt.leanback.default::UTV_ADBLOCK = {"data":false}`.
+- Dead ends: matching `contents.tvBrowseRenderer` at parse time (that's the post-rewrite shape), and
+  adding tabs directly.

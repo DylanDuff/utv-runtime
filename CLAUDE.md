@@ -5,12 +5,14 @@ personal use. Every finding, patch and its version-proof fingerprint lives in `P
 
 ## Structure
 - `./utv-runtime`: the CLI. No command = guided flow (doctor, connect, pull, name prompt, decode, patch,
-  build, install). Subcommands run single steps. Flags: `--ip`, `--name`, `--version`, `--yes`.
+  build, install). Subcommands run single steps. Flags: `--ip`, `--name`, `--version`, `--yes`, `--devtools`.
 - `lib/common.sh`: constants (PACKAGE, NEW_PACKAGE, paths), prompts (`ask`, `confirm`,
   `confirm_destructive`), config (`.utv-runtime.conf`), version/APK resolution.
 - `lib/steps/<step>.sh`: one `step_<name>` function per step (`eval.sh` also holds the JS wrapper). `utv-runtime` sources them all.
-- `patches/`: patch payloads (`adblock.js`, `AdBlockObserver.smali` template, Perl helpers).
-  `lib/steps/patch.sh` applies them.
+- `patches/smali/`: the bootloader (`RuntimeObserver.smali`, `EvalReceiver.smali` templates, Perl helpers).
+- `patches/runtime.js`: JS core (log channel, settings registry, response hook pipeline, `utv.patch`).
+- `patches/*.js`: JS patches, bundled after the core in filename order, each in its own scope.
+  API and rules: `docs/js-patches.md`. `lib/steps/patch.sh` builds the bundle and applies smali patches.
 
 ## Data
 Top level holds only `utv-runtime`, `logs/`, `.utv-runtime.conf`, source (`lib/`, `patches/`) and docs.
@@ -32,13 +34,16 @@ Everything generated lives under `workspace/` (gitignored):
   All splits share the package name and signing key. `extractNativeLibs=false`: `.so` files stay
   stored and page aligned (`zipalign -p 4`).
 - The app is Cobalt (Chromium-based web runtime). UI and ads are JS from youtube.com/tv; smali only
-  hosts the shell. Ads are removed by injecting JS, not by `return-void` patches.
+  hosts the shell. Smali is a bootloader; features are JS patches (`utv.patch`), not `return-void` edits.
+- JS patch settings become native YouTube client settings: keys are registered in the app's
+  known-settings registry and defaults Map (found by content via `ENABLE_PREVIEWS_WITH_SOUND`).
+  The Settings category is only injected after registration succeeds.
 - Patches never hardcode obfuscated names. They locate files by string anchors or unobfuscated names
   (`dev.cobalt.*`, `GEN_JNI` stubs, JNI-called methods) and resolve obfuscated ones structurally.
   Every patch writes `# PATCH <id>` and is a no-op when re-run.
 - apktool 3 takes `-q` after the subcommand (`apktool d -q`), not before.
 - Cobalt drops console output from injected scripts and YouTube swallows uncaught errors. Injected
-  JS logs via `utv.report()` (title channel -> `AdBlockObserver.titleWasSet` -> logcat tag `utv-runtime`).
+  JS logs via `utv.report()` (title channel -> `RuntimeObserver.titleWasSet` -> logcat tag `utv-runtime`).
 - No Chrome DevTools in this build. `--devtools` adds `EvalReceiver` for `./utv-runtime eval`; it is
   an exported receiver, so never make it the default.
 - The page enforces Trusted Types: string `eval` needs a TrustedScript (the eval wrapper creates a

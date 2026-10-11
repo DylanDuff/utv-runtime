@@ -9,7 +9,15 @@ login aren't touched.
 
 - [PATCHES.md](PATCHES.md): findings, every patch, and the string anchors and fingerprints
   needed to redo them after an update.
+- [docs/js-patches.md](docs/js-patches.md): writing JS patches (API, settings, rules).
 - [CLAUDE.md](CLAUDE.md): layout, invariants and conventions.
+
+## How it works
+
+The smali patches are a bootloader: they make the renamed app run, and inject one JS bundle into
+YouTube's TV web app (`patches/runtime.js`, the core, plus every JS patch in `patches/*.js`). Features
+are JS patches. Each one gets an on/off toggle in YouTube's own Settings under "utv-runtime", and can
+declare extra toggles; the core registers them as native YouTube settings and hands the values back.
 
 ## Requirements
 
@@ -79,5 +87,7 @@ offers to uninstall the patched app (never stock).
 2. If a patch stops with "anchor not found" or "shape changed", follow its fingerprint in
    `PATCHES.md` to find the new location in `jadx` output, then update `lib/steps/patch.sh`.
 3. If ads come back but nothing fails, YouTube changed its ad fields: edit `patches/adblock.js`
-   and run `./utv-runtime patch && ./utv-runtime build && ./utv-runtime install`.
+   and run `./utv-runtime patch && ./utv-runtime build && ./utv-runtime install`. If the
+   "utv-runtime" Settings category disappears, the settings registry moved (see Finding 7 in
+   `PATCHES.md`); patches keep running with their defaults meanwhile.
 4. Record the new version and results in `PATCHES.md`.

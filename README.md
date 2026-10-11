@@ -155,7 +155,7 @@ JS inside the patched app.
 
 ## Limitations
 
-- The patched app is a separate app: the remote's YouTube button and launcher links open stock YouTube,
+- The patched app is a separate app (default package `com.utv.runtime`, launcher name "UTV"): the remote's YouTube button and launcher links open stock YouTube,
   and casting from a phone most likely lands in stock YouTube too.
 - Play Services features that check Google's signature (such as DroidGuard attestation) fail quietly in
   the patched app. Sign-in and playback work.
@@ -173,6 +173,10 @@ docs/js-patches.md       JS patch API and development guide
 PATCHES.md               findings, patch log and fingerprints
 workspace/  logs/        generated (gitignored)
 ```
+
+## License
+
+[MIT](LICENSE). This covers the code in this repository only, not the YouTube app it patches.
 
 ## Disclaimer
 

@@ -28,9 +28,9 @@ Everything generated lives under `workspace/` (gitignored):
 
 ## Invariants
 - Stock YouTube is a Google-signed system app (`/product/app/YouTubeLeanback`). A re-signed APK can't
-  replace it without root, so the patched build uses the fixed package `.adfree` and installs beside
+  replace it without root, so the patched build uses the fixed package `com.utv.runtime` (outside Google's namespace) and installs beside
   it. Only the label is user-chosen, so every run updates the same app and keeps its login.
-  Never uninstall stock. `install` may uninstall only `.adfree`, and only via `confirm_destructive`.
+  Never uninstall stock. `install` may uninstall only the patched package, and only via `confirm_destructive`.
 - The APK set is `base.apk` plus whatever `split_*.apk` were pulled; never hardcode split names.
   All splits share the package name and signing key. `extractNativeLibs=false`: `.so` files stay
   stored and page aligned (`zipalign -p 4`).

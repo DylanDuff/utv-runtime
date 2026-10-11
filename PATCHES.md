@@ -13,7 +13,7 @@ obfuscated and change between versions; rely on the string anchors and shapes.
 | versionCode | 721302320 |
 | minSdk / targetSdk | 29 / 36 |
 | Splits | `base.apk`, `split_config.armeabi_v7a.apk` (native libs only) |
-| Device | Android 12 (SDK 31), armeabi-v7a, 192.168.20.10 |
+| Device | TCL Smart TV Pro, Android 12 (SDK 31), armeabi-v7a, on the local network |
 | Originals | `workspace/original/7.21.302/` |
 | base.apk sha256 | `13cdb0b8709524574e7abc8a1d76e97ff99fec3dcc08492c4fc586e8a3b43166` |
 | split sha256 | `4c2ee0ccac9d2493f98a8ac79c54472874909e5de80f3ab09522250e6c59ff7a` |
@@ -29,6 +29,10 @@ obfuscated and change between versions; rely on the string anchors and shapes.
 - Non-root option: rename the package so the patched app installs next to stock. Both
   `base.apk` and the split must be renamed, because every split's manifest `package`
   must match the base.
+- Default patched package: `com.utv.runtime`, launcher name "UTV" (`NEW_PACKAGE`, `DEFAULT_LABEL` in
+  `lib/common.sh`). Deliberately outside Google's `com.google.*` namespace and without "YouTube" in the
+  name, so the result doesn't present itself as a Google app. Earlier builds used
+  `com.google.android.youtube.tv.adfree`; changing the package installs a separate app (new login).
 
 Manifest notes for a rename (7.21.302):
 - No `<provider>` elements, so there are no authorities to rewrite.
@@ -63,7 +67,7 @@ responses. Not yet attempted.
 
 ## Finding 3: renamed + re-signed build crashes on startup (GMS DroidGuard refusal)
 
-Test: package renamed to `com.google.android.youtube.tv.adfree`, label "YouTube Test", no other
+Test (with the original defaults; the default is now `com.utv.runtime`, label "UTV"): package renamed to `com.google.android.youtube.tv.adfree`, label "YouTube Test", no other
 changes, installed beside stock. (Logs from this and the next two tests were lost: they were saved
 in `build/` (now `workspace/build/`), which every build wipes. Logs now go to `logs/`.)
 
@@ -72,7 +76,7 @@ Result: launches, starts loading `https://www.youtube.com/tv`, then crashes abou
 ```
 FATAL EXCEPTION: DG
 java.lang.SecurityException: PackageVerificationRslt: not allowed:
-  pkg=com.google.android.youtube.tv.adfree, sha256=[29d26ca7...], atk=false
+  pkg=com.google.android.youtube.tv.adfree, sha256=[<signing cert>], atk=false
   at cyf.r -> cyc.a -> cye.b -> cxx.c -> cxy.handleMessage
 ```
 
@@ -186,7 +190,7 @@ preferred-languages setting. Needs multi-select support in the core first (see `
 
 | | |
 | --- | --- |
-| Purpose | Report the stock package in the user agent instead of `.adfree` |
+| Purpose | Report the stock package in the user agent instead of the patched package |
 | Method | `dev.cobalt.coat.BaseStarboardBridge.getUserAgentAuxField()Ljava/lang/String;` (unobfuscated, called from native) |
 | Change | Returns `"com.google.android.youtube.tv/<versionName>"` immediately; version read from `apktool.yml` at patch time |
 | Why | Stock builds `<getApplicationInfo().packageName>/<versionName>`, which after the rename reported an unknown client. Suspected cause of lower resolution thumbnails. |

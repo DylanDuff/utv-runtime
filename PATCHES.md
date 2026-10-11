@@ -172,6 +172,16 @@ Verified by A/B (the `gms-security-graceful` build played ads) and by its own lo
 Planned: let the user pick which topics to hide with a multi-select setting, like YouTube's
 preferred-languages setting. Needs multi-select support in the core first (see `docs/js-patches.md`).
 
+## JS patch: shorts
+
+| | |
+| --- | --- |
+| File | `patches/shorts.js` |
+| Setting | "Hide Shorts" (`UTV_SHORTS`, default on) |
+| Change | Removes, from every array in every response: the `guideEntryRenderer` whose `navigationEndpoint` is a `reelWatchEndpoint` (menu entry), and every `shelfRenderer` with `tvhtml5ShelfRendererType: "TVHTML5_SHELF_RENDERER_TYPE_SHORTS"` |
+| Applies | Feeds: next loaded rows. Menu: on app restart |
+| Result | **Works.** Menu is Search, Home, Subscriptions, Library, Settings; no Shorts shelves on Home while scrolling, loading more rows unaffected. |
+
 ## ua-stock-package
 
 | | |
@@ -270,3 +280,15 @@ builds doesn't need a fresh decode. Results are base64'd because titles collapse
   (`reelWatchEndpoint`), Subscriptions (`FEsubscriptions`), Library (`FElibrary`), then topic tabs
   `FEtopics_gaming`, `_podcasts`, `_news`, `_music`, `_sports`, `_movies`. Settings comes from `footer`.
 - The menu DOM is `ytlr-guide-response` > `ytlr-guide-entry-renderer`.
+
+## Finding 9: Shorts in feeds (7.21.302)
+
+- Shorts only appear as their own shelves, never mixed into normal rows.
+- Home's first response has no Shorts; the Shorts shelf arrives in a scroll continuation
+  (`continuationContents.sectionListContinuation.contents[]`). Other browse pages carry it under
+  `contents.tvBrowseRenderer.content.tvSurfaceContentRenderer.content.sectionListRenderer.contents[]`.
+- Shelf markers: `shelfRenderer.tvhtml5ShelfRendererType: "TVHTML5_SHELF_RENDERER_TYPE_SHORTS"`,
+  header `shelfHeaderRenderer.avatarLockup.avatarLockupRenderer` with icon `YOUTUBE_SHORTS_FILL_24`.
+- Tile markers (inside the shelf): `tileRenderer.style: "TILE_STYLE_YTLR_SHORTS"`,
+  `contentType: "TILE_CONTENT_TYPE_SHORTS"` (not always present), `onSelectCommand.reelWatchEndpoint`.
+- Menu entry: `guideEntryRenderer` with `navigationEndpoint.reelWatchEndpoint` (icon `YOUTUBE_SHORTS_FILL_24`).

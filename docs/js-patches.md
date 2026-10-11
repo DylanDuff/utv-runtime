@@ -70,6 +70,7 @@ utv.captured();          // capture mode only: [{ time, size, keys, text }] raw 
 | --- | --- | --- |
 | `adblock.js` | `adblock` | Strips ad scheduling keys from player responses |
 | `navigation.js` | `navigation` | Removes topic tabs (`FEtopics_*`) from the main menu |
+| `shorts.js` | `shorts` | Removes Shorts shelves from feeds and the Shorts menu entry |
 
 ## Developing against the live page
 

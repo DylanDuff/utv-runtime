@@ -118,7 +118,7 @@ patch_runtime_inject() {
 }
 
 # ua-stock-package: Cobalt appends getUserAgentAuxField() ("<package>/<versionName>") to the user
-# agent. After the rename it reports the unknown .adfree package and YouTube serves it as a lower
+# agent. After the rename it reports the unknown patched package and YouTube serves it as a lower
 # tier device (low resolution thumbnails). Report the stock package instead. The method name is
 # unobfuscated because native code calls it through JNI.
 patch_ua_stock_package() {

@@ -1,4 +1,4 @@
 # Copy to .utv-runtime.conf, or just run ./utv-runtime once and it is written for you.
 DEVICE_IP=192.168.1.50
-APP_LABEL='YouTube Test'
+APP_LABEL=UTV
 VERSION=

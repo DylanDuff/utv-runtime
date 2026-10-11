@@ -7,8 +7,8 @@ CONFIG_FILE="$ROOT/.utv-runtime.conf"
 PACKAGE="com.google.android.youtube.tv"
 # Stock YouTube is a Google-signed system app, so the patched build installs beside it under this
 # fixed package. Keeping it fixed means every run updates the same app and keeps its login.
-NEW_PACKAGE="com.google.android.youtube.tv.adfree"
-DEFAULT_LABEL="YouTube Test"
+NEW_PACKAGE="com.utv.runtime"
+DEFAULT_LABEL="UTV"
 ADB_PORT=5555
 
 # Everything the pipeline generates lives under workspace/. Only logs/ and .utv-runtime.conf stay top level.

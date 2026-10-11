@@ -1,7 +1,8 @@
 # utv-runtime
 
-Manual (apktool + smali, no patch frameworks) ad removal for the YouTube Android TV app,
-personal use. Every finding, patch and its version-proof fingerprint lives in `PATCHES.md`.
+JS patch runtime and development environment for the YouTube Android TV app (apktool + smali
+bootloader, no patch frameworks; features are JS patches). Every finding, patch and its
+version-proof fingerprint lives in `PATCHES.md`; the JS patch API in `docs/js-patches.md`.
 
 ## Structure
 - `./utv-runtime`: the CLI. No command = guided flow (doctor, connect, pull, name prompt, decode, patch,

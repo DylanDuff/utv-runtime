@@ -19,7 +19,8 @@ BUILD_DIR="$WORKSPACE/build"
 OUT_DIR="$WORKSPACE/out"
 KEYS_DIR="$WORKSPACE/keys"
 LOG_DIR="$ROOT/logs"
-PATCHES_DIR="$ROOT/patches"
+PATCHES_DIR="$ROOT/patches"  # runtime.js (core) + JS patches
+SMALI_DIR="$PATCHES_DIR/smali"     # bootloader: smali templates and helpers
 
 KEYSTORE="$KEYS_DIR/atv.keystore"
 KEY_ALIAS="atv"

@@ -2,29 +2,29 @@
 .super Landroid/content/BroadcastReceiver;
 .source "EvalReceiver.java"
 
-# PATCH adblock-inject (--devtools builds only)
+# PATCH runtime-inject (--devtools builds only)
 # Receives "dev.utv.runtime.EVAL" broadcasts from `utv-runtime eval` and runs the base64 "js64" extra
-# in the page through AdBlockObserver.evaluate. Results come back over the title log channel.
+# in the page through RuntimeObserver.evaluate. Results come back over the title log channel.
 # Exported on purpose so adb can reach it, which also means any app on the TV can inject JS:
 # never ship this in an everyday build.
 
 .field private static registered:Z
 
-.field private final observer:Lzz/AdBlockObserver;
+.field private final observer:Lzz/RuntimeObserver;
 
 
-.method public constructor <init>(Lzz/AdBlockObserver;)V
+.method public constructor <init>(Lzz/RuntimeObserver;)V
     .locals 0
 
     invoke-direct {p0}, Landroid/content/BroadcastReceiver;-><init>()V
-    iput-object p1, p0, Lzz/EvalReceiver;->observer:Lzz/AdBlockObserver;
+    iput-object p1, p0, Lzz/EvalReceiver;->observer:Lzz/RuntimeObserver;
     return-void
 .end method
 
 
 # Register once per process. The application context comes from ActivityThread.currentApplication()
 # so no app class (and no obfuscated name) is needed.
-.method public static register(Lzz/AdBlockObserver;)V
+.method public static register(Lzz/RuntimeObserver;)V
     .locals 4
 
     sget-boolean v0, Lzz/EvalReceiver;->registered:Z
@@ -46,7 +46,7 @@
     check-cast v0, Landroid/content/Context;
 
     new-instance v1, Lzz/EvalReceiver;
-    invoke-direct {v1, p0}, Lzz/EvalReceiver;-><init>(Lzz/AdBlockObserver;)V
+    invoke-direct {v1, p0}, Lzz/EvalReceiver;-><init>(Lzz/RuntimeObserver;)V
     new-instance v2, Landroid/content/IntentFilter;
     const-string v3, "dev.utv.runtime.EVAL"
     invoke-direct {v2, v3}, Landroid/content/IntentFilter;-><init>(Ljava/lang/String;)V
@@ -90,8 +90,8 @@
     sget-object v2, Ljava/nio/charset/StandardCharsets;->UTF_8:Ljava/nio/charset/Charset;
     invoke-direct {v1, v0, v2}, Ljava/lang/String;-><init>([BLjava/nio/charset/Charset;)V
 
-    iget-object v0, p0, Lzz/EvalReceiver;->observer:Lzz/AdBlockObserver;
-    invoke-virtual {v0, v1}, Lzz/AdBlockObserver;->evaluate(Ljava/lang/String;)V
+    iget-object v0, p0, Lzz/EvalReceiver;->observer:Lzz/RuntimeObserver;
+    invoke-virtual {v0, v1}, Lzz/RuntimeObserver;->evaluate(Ljava/lang/String;)V
     :try_end
     .catch Ljava/lang/Throwable; {:try_start .. :try_end} :failed
 

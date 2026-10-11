@@ -64,7 +64,7 @@ guided() {
   TV          $(serial)
   Stock       $PACKAGE $VERSION (left untouched)
   Patched     $NEW_PACKAGE "$APP_LABEL"
-  Patches     rename, gms-security-graceful, adblock-inject, ua-stock-package$([ "$DEVTOOLS" = 1 ] && echo ", devtools")
+  Patches     rename, gms-security-graceful, runtime-inject, ua-stock-package$([ "$DEVTOOLS" = 1 ] && echo ", devtools")
 
 EOF
     confirm "Build and install now?" Y || die "cancelled"
